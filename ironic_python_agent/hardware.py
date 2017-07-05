@@ -933,15 +933,21 @@ class GenericHardwareManager(HardwareManager):
         utils.try_execute('modprobe', 'ipmi_si')
 
         try:
-            out, _e = utils.execute(
-                "ipmitool lan print | grep -e 'IP Address [^S]' "
-                "| awk '{ print $4 }'", shell=True)
+            for channel in range(16):
+                out, e = utils.execute(
+                    "ipmitool lan print {} | awk '/IP Address[[:space:]]*:/"
+                    " {{print $4}}'".format(channel + 1), shell=True)
+                if out.strip() not in ('', '0.0.0.0') and e == '':
+                    return out.strip()
+
         except (processutils.ProcessExecutionError, OSError) as e:
             # Not error, because it's normal in virtual environment
             LOG.warning("Cannot get BMC address: %s", e)
             return
 
-        return out.strip()
+        # In case none of lan channels is properly configured, we should return
+        # zeroed IP to be compliant with the behavior of ipmitool
+        return '0.0.0.0'
 
     def get_clean_steps(self, node, ports):
         return [

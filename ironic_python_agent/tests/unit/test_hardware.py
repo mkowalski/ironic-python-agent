@@ -1542,6 +1542,23 @@ class TestGenericHardwareManager(base.IronicAgentTest):
         self.assertIsNone(self.hardware.get_bmc_address())
 
     @mock.patch.object(utils, 'execute', autospec=True)
+    def test_get_bmc_address_zeroed(self, mocked_execute):
+        mocked_execute.return_value = '0.0.0.0\n', ''
+        self.assertEqual('0.0.0.0', self.hardware.get_bmc_address())
+
+    @mock.patch.object(utils, 'execute', autospec=True)
+    def test_get_bmc_address_invalid(self, mocked_execute):
+        # In case of invalid lan channel, stdout is empty and the error
+        # on stderr is "Invalid channel"
+        mocked_execute.return_value = '\n', 'Invalid channel: 55'
+        self.assertEqual('0.0.0.0', self.hardware.get_bmc_address())
+
+    @mock.patch.object(utils, 'execute', autospec=True)
+    def test_get_bmc_address_not_available(self, mocked_execute):
+        mocked_execute.return_value = '', ''
+        self.assertEqual('0.0.0.0', self.hardware.get_bmc_address())
+
+    @mock.patch.object(utils, 'execute', autospec=True)
     def test_get_system_vendor_info(self, mocked_execute):
         mocked_execute.return_value = (
             '# dmidecode 2.12\n'
